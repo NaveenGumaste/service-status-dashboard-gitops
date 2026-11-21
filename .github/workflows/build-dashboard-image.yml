@@ -23,6 +23,7 @@ jobs:
     outputs:
       image_ref: ${{ steps.image.outputs.ref }}
       source_sha: ${{ steps.image.outputs.source_sha }}
+
     env:
       IMAGE_REPOSITORY: ghcr.io/naveengumaste/service-status-dashboard
 
