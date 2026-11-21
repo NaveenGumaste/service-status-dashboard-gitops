@@ -3,6 +3,10 @@ name: Build dashboard image
 on:
   workflow_dispatch:
 
+concurrency:
+  group: dashboard-image-main
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
@@ -14,6 +18,9 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      image_ref: ${{ steps.image.outputs.ref }}
+      source_sha: ${{ steps.image.outputs.source_sha }}
     env:
       IMAGE_REPOSITORY: ghcr.io/naveengumaste/service-status-dashboard
 
@@ -69,3 +76,54 @@ jobs:
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker push "$IMAGE"
           printf 'Image: %s\n\nApp commit: %s\n' "$IMAGE" "$APP_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+  promote:
+    name: Promote image in Helm values
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      IMAGE_REF: ${{ needs.build.outputs.image_ref }}
+      APP_SHA: ${{ needs.build.outputs.source_sha }}
+
+    steps:
+      - name: Check out GitOps repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Update and commit Helm values
+        run: |
+          chart=charts/service-status-dashboard
+          values="$chart/values.yaml"
+          export IMAGE_REPOSITORY="${IMAGE_REF%:*}"
+          export IMAGE_TAG="${IMAGE_REF##*:}"
+          export RELEASE_ID="ghcr-${APP_SHA:0:7}"
+
+          if yq -e '
+            .image.repository == strenv(IMAGE_REPOSITORY) and
+            .image.tag == strenv(IMAGE_TAG) and
+            .image.pullSecret == "ghcr-pull" and
+            .app.releaseId == strenv(RELEASE_ID) and
+            .app.commitSha == strenv(APP_SHA)
+          ' "$values" >/dev/null; then
+            echo "Helm already selects $IMAGE_REF"
+            exit 0
+          fi
+
+          yq -i '
+            .image.repository = strenv(IMAGE_REPOSITORY) |
+            .image.tag = strenv(IMAGE_TAG) |
+            .image.pullSecret = "ghcr-pull" |
+            .app.releaseId = strenv(RELEASE_ID) |
+            .app.commitSha = strenv(APP_SHA)
+          ' "$values"
+
+          helm lint "$chart" --strict
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$values"
+          git commit -m "chore: promote dashboard image ${APP_SHA:0:7}"
+          git push origin HEAD:main
