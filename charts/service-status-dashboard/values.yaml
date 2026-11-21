@@ -1,16 +1,17 @@
 replicaCount: 2
 
 image:
-  repository: docker.io/library/service-status-dashboard
-  tag: ""
+  repository: ghcr.io/naveengumaste/service-status-dashboard
+  tag: "sha-727febb3c438e182a39bb1ec346e1d3a8e8a1f4a"
   pullPolicy: IfNotPresent
+  pullSecret: ghcr-pull
 
 environment: development
 
 app:
   version: ""
-  releaseId: "gitops-rollout-01"
-  commitSha: local
+  releaseId: "ghcr-727febb"
+  commitSha: "727febb3c438e182a39bb1ec346e1d3a8e8a1f4a"
   buildTime: ""
 
 simulation:
