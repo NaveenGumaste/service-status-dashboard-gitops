@@ -14,7 +14,7 @@ app:
   buildTime: ""
 
 simulation:
-  simulateUnready: false
+  simulateUnready: true
   simulateUnhealthy: false
 
 resources:
