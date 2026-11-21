@@ -1,0 +1,26 @@
+replicaCount: 2
+
+image:
+  repository: docker.io/library/service-status-dashboard
+  tag: ""
+  pullPolicy: IfNotPresent
+
+environment: development
+
+app:
+  version: ""
+  releaseId: ""
+  commitSha: local
+  buildTime: ""
+
+simulation:
+  simulateUnready: false
+  simulateUnhealthy: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

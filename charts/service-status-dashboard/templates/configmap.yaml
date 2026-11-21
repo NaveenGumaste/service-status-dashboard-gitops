@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  HOSTNAME: "0.0.0.0"
+  APP_VERSION: {{ .Values.app.version | default .Chart.AppVersion | quote }}
+  APP_ENV: {{ .Values.environment | quote }}
+  APP_RELEASE_ID: {{ .Values.app.releaseId | default .Release.Name | quote }}
+  APP_COMMIT_SHA: {{ .Values.app.commitSha | quote }}
+  APP_BUILD_TIME: {{ .Values.app.buildTime | quote }}
+  SIMULATE_UNREADY: {{ .Values.simulation.simulateUnready | quote }}
+  SIMULATE_UNHEALTHY: {{ .Values.simulation.simulateUnhealthy | quote }}
