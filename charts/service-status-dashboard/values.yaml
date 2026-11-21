@@ -9,7 +9,7 @@ environment: development
 
 app:
   version: ""
-  releaseId: ""
+  releaseId: "gitops-rollout-01"
   commitSha: local
   buildTime: ""
 
