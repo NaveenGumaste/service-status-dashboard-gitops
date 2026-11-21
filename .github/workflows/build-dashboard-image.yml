@@ -2,6 +2,8 @@ name: Build dashboard image
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
 
 concurrency:
   group: dashboard-image-main
@@ -34,7 +36,28 @@ jobs:
           ssh-key: ${{ secrets.APP_SOURCE_SSH_KEY }}
           persist-credentials: false
 
+      - name: Check out GitOps history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: gitops-state
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for a new app revision
+        id: revision
+        run: |
+          app_sha=$(git -C app rev-parse HEAD)
+          prior=$(git -C gitops-state log -1 --format=%H -S "sha-$app_sha" -- charts/service-status-dashboard/values.yaml)
+          if [[ -n "$prior" ]]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "App commit $app_sha is already recorded in GitOps history"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Node.js
+        if: steps.revision.outputs.build == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
@@ -42,6 +65,7 @@ jobs:
           cache-dependency-path: app/web/package-lock.json
 
       - name: Lint and test
+        if: steps.revision.outputs.build == 'true'
         working-directory: app/web
         env:
           npm_config_script_shell: /bin/bash
@@ -52,6 +76,7 @@ jobs:
           npm run typecheck
 
       - name: Build and smoke-test the image
+        if: steps.revision.outputs.build == 'true'
         id: image
         run: |
           app_sha=$(git -C app rev-parse HEAD)
@@ -68,6 +93,7 @@ jobs:
           printf 'ref=%s\nsource_sha=%s\n' "$image" "$app_sha" >> "$GITHUB_OUTPUT"
 
       - name: Publish to GHCR
+        if: steps.revision.outputs.build == 'true'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE: ${{ steps.image.outputs.ref }}
@@ -80,7 +106,7 @@ jobs:
   promote:
     name: Promote image in Helm values
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.image_ref != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write
