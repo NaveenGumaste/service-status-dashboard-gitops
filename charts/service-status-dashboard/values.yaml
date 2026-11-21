@@ -1,14 +1,14 @@
 replicaCount: 2
 image:
   repository: ghcr.io/naveengumaste/service-status-dashboard
-  tag: "sha-c41cfb4c6d495f0d43d2fa56d2cc71bba9419d88"
+  tag: "sha-3263dad82db6284c469a1158cae91daf69dfaad3"
   pullPolicy: IfNotPresent
   pullSecret: ghcr-pull
 environment: development
 app:
   version: ""
-  releaseId: "ghcr-c41cfb4"
-  commitSha: "c41cfb4c6d495f0d43d2fa56d2cc71bba9419d88"
+  releaseId: "ghcr-3263dad"
+  commitSha: "3263dad82db6284c469a1158cae91daf69dfaad3"
   buildTime: ""
 simulation:
   simulateUnready: false
